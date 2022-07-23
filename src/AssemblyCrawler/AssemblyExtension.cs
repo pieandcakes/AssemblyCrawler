@@ -12,7 +12,7 @@ namespace AssemblyCrawler
     {
         public static bool IsManagedAssembly(this AssemblyInfo assembly)
         {
-            string path = Path.Combine(assembly.Path, assembly.FileName.Value);
+            string path = Path.Combine(assembly.Path, assembly.FName.Value);
 
             return CheckIsManagedAssembly(path);
         }

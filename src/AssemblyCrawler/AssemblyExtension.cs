@@ -10,6 +10,27 @@ namespace AssemblyCrawler
 {
     internal static class AssemblyExtension
     {
+        public static Dictionary<int, List<AssemblyInfo>> SortByHashCode(this List<AssemblyInfo> assemblyDetail)
+        {
+            Dictionary<int, List<AssemblyInfo>> samesies = new Dictionary<int, List<AssemblyInfo>>();
+
+            foreach (var item in assemblyDetail.OrderByDescending(a => string.Concat(a.AssemblyVersion.Value.ToString(), a.FileVersion.Value.ToString())))
+            {
+                //Console.WriteLine($"{item.Path}");
+                //Console.WriteLine($"  av:'{item.AssemblyVersion.Value}'");
+                //Console.WriteLine($"  fv:'{item.FileVersion.Value}'");
+                //Console.WriteLine($"  sz:'{item.FileSize.Value.ToString("N0")}'");
+
+                int hc = item.GetHashCode();
+                if (!samesies.ContainsKey(hc)) samesies[hc] = new List<AssemblyInfo>();
+                samesies[hc].Add(item);
+            }
+
+
+
+            return samesies;
+        }
+
         public static bool IsManagedAssembly(this AssemblyInfo assembly)
         {
             string path = Path.Combine(assembly.Path, assembly.FName.Value);

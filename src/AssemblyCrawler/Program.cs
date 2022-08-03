@@ -9,10 +9,7 @@ namespace AssemblyCrawler
 {
     public class Program
     {
-
         private static Crawler crawler = null;
-        private static Dictionary<string, List<AssemblyInfo>> sortedAssemblies_all = null;
-        private static Dictionary<string, List<AssemblyInfo>> sortedAssemblies_managed = null;
 
         public static void Main(string[] args)
         {
@@ -73,72 +70,19 @@ namespace AssemblyCrawler
             c.Crawl();
             crawler = c;
 
-            Sort();
+            c.Sort();
         }
 
-        private static void Sort()
-        {
-            if (crawler == null)
-            {
-                Console.WriteLine("Must parse directory first.");
-                return;
-            }
-
-            var assemblies = crawler.AssemblyList;
-
-            Console.WriteLine($"Found in `{crawler.Path}`:");
-            Console.WriteLine($"    Total Files:      {crawler.TotalFileCount}");
-            Console.WriteLine($"    Total Assemblies: {crawler.TotalAssemblyCount}");
-
-            Console.WriteLine($"Starting sort.");
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
-            sortedAssemblies_all = new Dictionary<string, List<AssemblyInfo>>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var a in assemblies)
-            {
-                if (!sortedAssemblies_all.ContainsKey(a.FName.Value))
-                {
-                    sortedAssemblies_all.Add(a.FName.Value, new List<AssemblyInfo>());
-                }
-
-                sortedAssemblies_all[a.FName.Value].Add(a);
-            }
-
-            var keyList = sortedAssemblies_all.Keys.ToList();
-            foreach (var key in keyList)
-            {
-                if (sortedAssemblies_all[key].Count() == 1)
-                {
-                    sortedAssemblies_all.Remove(key);
-                }
-            }
-
-            sortedAssemblies_managed = new Dictionary<string, List<AssemblyInfo>>(sortedAssemblies_all);
-
-            keyList = sortedAssemblies_managed.Keys.ToList();
-            foreach(var key in keyList)
-            {
-                if (sortedAssemblies_managed[key][0].IsManaged.Value == false)
-                {
-                    sortedAssemblies_managed.Remove(key);
-                }
-            }
-
-            Console.WriteLine($"Sort complete in {sw.ElapsedMilliseconds}ms");
-
-        }
-
-        private static Dictionary<string, List<AssemblyInfo>> ListToUse(bool useManaged)
+        private static IReadOnlyDictionary<string, List<AssemblyInfo>> ListToUse(bool useManaged)
         {
             if (useManaged)
-                return sortedAssemblies_managed;
-            return sortedAssemblies_all;
+                return crawler.AllManagedAssemblies;
+            return crawler.AllAssemblies;
         } 
 
         private static void List()
         {
-            if (sortedAssemblies_all == null)
+            if (crawler == null)
             {
                 Console.WriteLine("Must parse a directory first.");
                 return;
@@ -186,6 +130,9 @@ namespace AssemblyCrawler
                     case "r":
                         GenerateRyansList(useManaged);
                         break;
+                    case "s":
+                        CreateSymLinkForAssembly();
+                        break;
                     case "q":
                         exit = true;
                         break;
@@ -198,6 +145,22 @@ namespace AssemblyCrawler
             }
         }
 
+        private static void CreateSymLinkForAssembly()
+        {
+            // only symlink managed assemblies
+            var list = ListToUse(true);
+            Console.WriteLine("Enter assembly name for SymLinking:");
+            var assemblyName = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(assemblyName) || !list.Keys.Contains(assemblyName, StringComparer.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("Invalid assemblyname or assemblyname not found. Only Managed Assembly names supported.");
+                return;
+            }
+
+            crawler.CreateSymlinks(assemblyName);
+
+        }
+
         private static void GenerateRyansList(bool useManaged)
         {
             var sortedList = ListToUse(useManaged);
@@ -205,7 +168,7 @@ namespace AssemblyCrawler
             Console.WriteLine("Filename to save it in (empty for output to screen):");
             var filename = Console.ReadLine();
 
-            StreamWriter sw = null;
+            StreamWriter? sw = null;
 
             try
             {
@@ -305,27 +268,14 @@ namespace AssemblyCrawler
             Console.WriteLine();
             Console.WriteLine($"'{assemblyName}' has {assemblyNameDetails.Count()} instances.");
 
-            Dictionary<int, List<AssemblyInfo>> samesies = new Dictionary<int, List<AssemblyInfo>>();
-
-            foreach (var item in assemblyNameDetails.OrderByDescending(a => string.Concat(a.AssemblyVersion.Value.ToString(), a.FileVersion.Value.ToString())))
-            {
-                //Console.WriteLine($"{item.Path}");
-                //Console.WriteLine($"  av:'{item.AssemblyVersion.Value}'");
-                //Console.WriteLine($"  fv:'{item.FileVersion.Value}'");
-                //Console.WriteLine($"  sz:'{item.FileSize.Value.ToString("N0")}'");
-
-                int hc = item.GetHashCode();
-                if (!samesies.ContainsKey(hc)) samesies[hc] = new List<AssemblyInfo>();
-                samesies[hc].Add(item);
-            }
-
+            var assemblyByHashCode = assemblyNameDetails.SortByHashCode();
             Console.WriteLine();
             Console.WriteLine("Matching assembly order:");
-            foreach (var key in samesies.Keys)
+            foreach (var key in assemblyByHashCode.Keys)
             {
-                Console.WriteLine($"fq: {samesies[key][0].AName.Value}, av: {samesies[key][0].AssemblyVersion.Value}, fv: {samesies[key][0].FileVersion.Value}, ct: {samesies[key].Count()}, sz:{samesies[key][0].FileSize.Value.ToString("N0")}, tot: {(samesies[key][0].FileSize.Value * (ulong)samesies[key].Count()).ToString("N0")}");
+                Console.WriteLine($"fq: {assemblyByHashCode[key][0].AName.Value}, av: {assemblyByHashCode[key][0].AssemblyVersion.Value}, fv: {assemblyByHashCode[key][0].FileVersion.Value}, ct: {assemblyByHashCode[key].Count()}, sz:{assemblyByHashCode[key][0].FileSize.Value.ToString("N0")}, tot: {(assemblyByHashCode[key][0].FileSize.Value * (ulong)assemblyByHashCode[key].Count()).ToString("N0")}");
 
-                foreach (var v in samesies[key].ToList())
+                foreach (var v in assemblyByHashCode[key].ToList())
                 {
                     Console.WriteLine($"  {v.Path}");
                 }

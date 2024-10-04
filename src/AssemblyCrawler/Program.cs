@@ -183,7 +183,7 @@ namespace AssemblyCrawler
                 }
 
                 // write header
-                sw.WriteLine("FileName,,,,Count,TotalSizeInMB,IsManaged");
+                sw.WriteLine("FileName,AssemblyName,Count,TotalSizeInMB,IsManaged,FilePath,Size");
                 foreach (var key in sortedList.Keys)
                 {
                     ulong sumInMB = 0;
@@ -193,7 +193,11 @@ namespace AssemblyCrawler
                         {
                             sumInMB += item.FileSize.Value;
                         }
-                        sw.WriteLine($"{key2},{sortedList[key][key2].Count()},{sumInMB.ToString()},{sortedList[key][key2][0].IsManaged.Value}");
+                        var prefix = $"{sortedList[key][key2][0].FName},{key2.Replace(',', ' ')},{sortedList[key][key2].Count()},{sumInMB.ToString()},{sortedList[key][key2][0].IsManaged.Value}";
+                        foreach (var a in sortedList[key][key2])
+                        {
+                            sw.WriteLine($"{prefix},{a.Path},{a.FileSize}");
+                        }
                     }
                 }
             }

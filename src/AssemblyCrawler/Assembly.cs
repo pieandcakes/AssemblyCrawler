@@ -65,7 +65,7 @@ namespace AssemblyCrawler
 
             this.FName = new Lazy<string>(() => file.Name.ToLowerInvariant());
 
-            this.AName = new Lazy<string>(() => assemblyName.Value.ToString());
+            this.AName = new Lazy<string>(() => assemblyName.Value?.ToString() ?? String.Empty);
             this.AssemblyVersion = new Lazy<Version>(GetAssemblyVersion);
             this.PublicKeyToken = new Lazy<string>(GetPublicKeyToken);
             this.IsManaged = new Lazy<bool>(() => this.IsManagedAssembly());
@@ -74,12 +74,19 @@ namespace AssemblyCrawler
 
         private AssemblyName GetAssemblyName()
         {
-            return AssemblyName.GetAssemblyName(file.FullName);
+            try
+            {
+                return AssemblyName.GetAssemblyName(file.FullName);
+            }
+            catch
+            {
+                return default;
+            }
         }
 
         private Version GetAssemblyVersion()
         {
-            return assemblyName.Value.Version;
+            return assemblyName.Value?.Version ?? new Version("0.0.0.0");
         }
 
         private string InitializeFramework()
@@ -107,15 +114,15 @@ namespace AssemblyCrawler
 
         private string GetPublicKey()
         {
-            return HexByteArrayToString(assemblyName.Value.GetPublicKey());
+            return HexByteArrayToString(assemblyName.Value?.GetPublicKey());
         }
 
         private string GetPublicKeyToken()
         {
-            return HexByteArrayToString(assemblyName.Value.GetPublicKeyToken());
+            return HexByteArrayToString(assemblyName.Value?.GetPublicKeyToken());
         }
 
-        private static string HexByteArrayToString(byte[] b)
+        private static string HexByteArrayToString(byte[]? b)
         {
             if (b != null && b.Any())
             {
@@ -164,17 +171,17 @@ namespace AssemblyCrawler
                 && string.Equals(typeRefNamespace, "System.Runtime.Versioning", StringComparison.Ordinal);
         }
 
-    //    public static ImmutableArray<string> GetParameterValues(this MetadataReader metadataReader, CustomAttribute customAttribute)
-    //    {
-    //        if (customAttribute.Constructor.Kind != HandleKind.MemberReference)
-    //        {
-    //            throw new InvalidOperationException();
-    //        }
-    //        var ctor = metadataReader.GetMemberReference((MemberReferenceHandle)customAttribute.Constructor);
-    //        var provider = new StringParameterValueTypeProvider(metadataReader, customAttribute.Value);
-    //        var signature = ctor.DecodeMethodSignature<string, object>(provider);
-    //        return signature.ParameterTypes;
-    //    }
+        //    public static ImmutableArray<string> GetParameterValues(this MetadataReader metadataReader, CustomAttribute customAttribute)
+        //    {
+        //        if (customAttribute.Constructor.Kind != HandleKind.MemberReference)
+        //        {
+        //            throw new InvalidOperationException();
+        //        }
+        //        var ctor = metadataReader.GetMemberReference((MemberReferenceHandle)customAttribute.Constructor);
+        //        var provider = new StringParameterValueTypeProvider(metadataReader, customAttribute.Value);
+        //        var signature = ctor.DecodeMethodSignature<string, object>(provider);
+        //        return signature.ParameterTypes;
+        //    }
     }
 
     internal static class StringExtension

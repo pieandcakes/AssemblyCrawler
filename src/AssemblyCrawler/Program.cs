@@ -73,7 +73,7 @@ namespace AssemblyCrawler
             c.Sort();
         }
 
-        private static IReadOnlyDictionary<string, List<AssemblyInfo>> ListToUse(bool useManaged)
+        private static IReadOnlyDictionary<string, Dictionary<string, List<AssemblyInfo>>> ListToUse(bool useManaged)
         {
             if (useManaged)
                 return crawler.AllManagedAssemblies;
@@ -147,17 +147,17 @@ namespace AssemblyCrawler
 
         private static void CreateSymLinkForAssembly()
         {
-            // only symlink managed assemblies
-            var list = ListToUse(true);
-            Console.WriteLine("Enter assembly name for SymLinking:");
-            var assemblyName = Console.ReadLine();
-            if (string.IsNullOrWhiteSpace(assemblyName) || !list.Keys.Contains(assemblyName, StringComparer.OrdinalIgnoreCase))
-            {
-                Console.WriteLine("Invalid assemblyname or assemblyname not found. Only Managed Assembly names supported.");
-                return;
-            }
+            //// only symlink managed assemblies
+            //var list = ListToUse(true);
+            //Console.WriteLine("Enter assembly name for SymLinking:");
+            //var assemblyName = Console.ReadLine();
+            //if (string.IsNullOrWhiteSpace(assemblyName) || !list.Keys.Contains(assemblyName, StringComparer.OrdinalIgnoreCase))
+            //{
+            //    Console.WriteLine("Invalid assemblyname or assemblyname not found. Only Managed Assembly names supported.");
+            //    return;
+            //}
 
-            crawler.CreateSymlinks(assemblyName);
+            //crawler.CreateSymlinks(assemblyName);
 
         }
 
@@ -183,15 +183,18 @@ namespace AssemblyCrawler
                 }
 
                 // write header
-                sw.WriteLine("FileName,Count,TotalSizeInMB,IsManaged");
+                sw.WriteLine("FileName,,,,Count,TotalSizeInMB,IsManaged");
                 foreach (var key in sortedList.Keys)
                 {
                     ulong sumInMB = 0;
-                    foreach (var item in sortedList[key])
+                    foreach (var key2 in sortedList[key].Keys.ToList())
                     {
-                        sumInMB += item.FileSize.Value;
+                        foreach (var item in sortedList[key][key2])
+                        {
+                            sumInMB += item.FileSize.Value;
+                        }
+                        sw.WriteLine($"{key2},{sortedList[key][key2].Count()},{sumInMB.ToString()},{sortedList[key][key2][0].IsManaged.Value}");
                     }
-                    sw.WriteLine($"{sortedList[key][0].FName},{sortedList[key].Count()},{sumInMB.ToString()},{sortedList[key][0].IsManaged.Value}");
                 }
             }
             finally
@@ -268,16 +271,19 @@ namespace AssemblyCrawler
             Console.WriteLine();
             Console.WriteLine($"'{assemblyName}' has {assemblyNameDetails.Count()} instances.");
 
-            var assemblyByHashCode = assemblyNameDetails.SortByHashCode();
-            Console.WriteLine();
-            Console.WriteLine("Matching assembly order:");
-            foreach (var key in assemblyByHashCode.Keys)
+            foreach (var key2 in assemblyNameDetails.Keys.ToList())
             {
-                Console.WriteLine($"fq: {assemblyByHashCode[key][0].AName.Value}, av: {assemblyByHashCode[key][0].AssemblyVersion.Value}, fv: {assemblyByHashCode[key][0].FileVersion.Value}, ct: {assemblyByHashCode[key].Count()}, sz:{assemblyByHashCode[key][0].FileSize.Value.ToString("N0")}, tot: {(assemblyByHashCode[key][0].FileSize.Value * (ulong)assemblyByHashCode[key].Count()).ToString("N0")}");
-
-                foreach (var v in assemblyByHashCode[key].ToList())
+                var assemblyByHashCode = assemblyNameDetails[key2].SortByHashCode();
+                Console.WriteLine();
+                Console.WriteLine("Matching assembly order:");
+                foreach (var key in assemblyByHashCode.Keys)
                 {
-                    Console.WriteLine($"  {v.Path}");
+                    Console.WriteLine($"fq: {assemblyByHashCode[key][0].AName.Value}, av: {assemblyByHashCode[key][0].AssemblyVersion.Value}, fv: {assemblyByHashCode[key][0].FileVersion.Value}, ct: {assemblyByHashCode[key].Count()}, sz:{assemblyByHashCode[key][0].FileSize.Value.ToString("N0")}, tot: {(assemblyByHashCode[key][0].FileSize.Value * (ulong)assemblyByHashCode[key].Count()).ToString("N0")}");
+
+                    foreach (var v in assemblyByHashCode[key].ToList())
+                    {
+                        Console.WriteLine($"  {v.Path}");
+                    }
                 }
             }
         }

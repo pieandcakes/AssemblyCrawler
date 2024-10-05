@@ -183,7 +183,7 @@ namespace AssemblyCrawler
                 }
 
                 // write header
-                sw.WriteLine("FileName,AssemblyName,Count,TotalSizeInMB,IsManaged,FilePath,Size");
+                sw.WriteLine("FileName,AssemblyName,Count,TotalSizeInMB,IsManaged,FrameWorkVersion,FilePath,Size");
                 foreach (var key in sortedList.Keys)
                 {
                     ulong sumInMB = 0;
@@ -193,7 +193,7 @@ namespace AssemblyCrawler
                         {
                             sumInMB += item.FileSize.Value;
                         }
-                        var prefix = $"{sortedList[key][key2][0].FName},{key2.Replace(',', ' ')},{sortedList[key][key2].Count()},{sumInMB.ToString()},{sortedList[key][key2][0].IsManaged.Value}";
+                        var prefix = $"{sortedList[key][key2][0].FName},{key2.Replace(',', ' ')},{sortedList[key][key2].Count()},{sumInMB.ToString()},{sortedList[key][key2][0].IsManaged.Value},{sortedList[key][key2][0].FrameworkVersion.Value.Replace(',',' ')}";
                         foreach (var a in sortedList[key][key2])
                         {
                             sw.WriteLine($"{prefix},{a.Path},{a.FileSize}");
@@ -282,7 +282,7 @@ namespace AssemblyCrawler
                 Console.WriteLine("Matching assembly order:");
                 foreach (var key in assemblyByHashCode.Keys)
                 {
-                    Console.WriteLine($"fq: {assemblyByHashCode[key][0].AName.Value}, av: {assemblyByHashCode[key][0].AssemblyVersion.Value}, fv: {assemblyByHashCode[key][0].FileVersion.Value}, ct: {assemblyByHashCode[key].Count()}, sz:{assemblyByHashCode[key][0].FileSize.Value.ToString("N0")}, tot: {(assemblyByHashCode[key][0].FileSize.Value * (ulong)assemblyByHashCode[key].Count()).ToString("N0")}");
+                    Console.WriteLine($"fq: {assemblyByHashCode[key][0].AName.Value}, av: {assemblyByHashCode[key][0].AssemblyVersion.Value}, fv: {assemblyByHashCode[key][0].FileVersion.Value}, frv: {assemblyByHashCode[key][0].FrameworkVersion.Value}, ct: {assemblyByHashCode[key].Count()}, sz:{assemblyByHashCode[key][0].FileSize.Value.ToString("N0")}, tot: {(assemblyByHashCode[key][0].FileSize.Value * (ulong)assemblyByHashCode[key].Count()).ToString("N0")}");
 
                     foreach (var v in assemblyByHashCode[key].ToList())
                     {

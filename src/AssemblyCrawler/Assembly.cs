@@ -91,24 +91,45 @@ namespace AssemblyCrawler
 
         private string InitializeFramework()
         {
-            ////Concord\src\StandaloneSetup\AssemblyReferenceChecker\ImportedAssembly.cs
-            //using var stream = File.OpenRead(file.FullName);
-            //using var reader = new PEReader(stream);
+            //Concord\src\StandaloneSetup\AssemblyReferenceChecker\ImportedAssembly.cs
+            using var stream = File.OpenRead(file.FullName);
+            using var reader = new PEReader(stream);
 
-            //if (!reader.HasMetadata)
-            //{
-            //    return String.Empty;
-            //}
+            if (!reader.HasMetadata)
+            {
+                return String.Empty;
+            }
 
-            //var metadataReader = reader.GetMetadataReader();
+            var metadataReader = reader.GetMetadataReader();
 
-            //// look for System.Runtime.Versioning.TargetFrameworkAttribute
-            //var attributeHandle = metadataReader.CustomAttributes.Cast<CustomAttributeHandle>().SingleOrDefault(metadataReader.IsTargetFrameworkMonikerAttribute);
-            //if (attributeHandle.IsNil)
-            //    return String.Empty;
-            //var parameters = metadataReader.GetParameterValues(metadataReader.GetCustomAttribute(attributeHandle));
+            foreach (var handle in metadataReader.CustomAttributes)
+            {
+                try
+                {
+                    // look for System.Runtime.Versioning.TargetFrameworkAttribute
+                    // var attributeHandle = metadataReader.CustomAttributes.Cast<CustomAttributeHandle>().SingleOrDefault(metadataReader.IsTargetFrameworkMonikerAttribute);
+                    var attribute = metadataReader.GetCustomAttribute(handle);
+                    if (attribute.Constructor.Kind != HandleKind.MemberReference)
+                    {
+                        continue;
+                    }
+                    // Throws InvalidCastException
+                    var attributeConstructor = metadataReader.GetMemberReference((MemberReferenceHandle)attribute.Constructor);
+                    var attributeType = metadataReader.GetTypeReference((TypeReferenceHandle)attributeConstructor.Parent);
+                    var attributeName = metadataReader.GetString(attributeType.Name);
 
-            //return parameters.FirstOrDefault();
+                    if (attributeName == "TargetFrameworkAttribute")
+                    {
+                        // "\u0001\0\u0019.NETStandard,Version=v2.0\u0001\0T\u000e\u0014FrameworkDisplayName\u0011.NET Standard 2.0"
+                        var value = metadataReader.GetBlobReader(attribute.Value);
+                        _ = value.ReadByte();
+                        _ = value.ReadByte();
+                        var targetFramework = value.ReadSerializedString();
+                        return targetFramework;
+                    }
+                }
+                catch { }
+            }
             return string.Empty;
         }
 
@@ -159,6 +180,8 @@ namespace AssemblyCrawler
             {
                 return false;
             }
+
+            // GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName;
             var constructorRef = metadataReader.GetMemberReference((MemberReferenceHandle)customAttribute.Constructor);
             if (constructorRef.Parent.Kind != HandleKind.TypeReference)
             {
@@ -171,17 +194,100 @@ namespace AssemblyCrawler
                 && string.Equals(typeRefNamespace, "System.Runtime.Versioning", StringComparison.Ordinal);
         }
 
-        //    public static ImmutableArray<string> GetParameterValues(this MetadataReader metadataReader, CustomAttribute customAttribute)
-        //    {
-        //        if (customAttribute.Constructor.Kind != HandleKind.MemberReference)
-        //        {
-        //            throw new InvalidOperationException();
-        //        }
-        //        var ctor = metadataReader.GetMemberReference((MemberReferenceHandle)customAttribute.Constructor);
-        //        var provider = new StringParameterValueTypeProvider(metadataReader, customAttribute.Value);
-        //        var signature = ctor.DecodeMethodSignature<string, object>(provider);
-        //        return signature.ParameterTypes;
-        //    }
+        public static ImmutableArray<string> GetParameterValues(this MetadataReader metadataReader, CustomAttribute customAttribute)
+        {
+            if (customAttribute.Constructor.Kind != HandleKind.MemberReference)
+            {
+                throw new InvalidOperationException();
+            }
+            var ctor = metadataReader.GetMemberReference((MemberReferenceHandle)customAttribute.Constructor);
+            var provider = new StringParameterValueTypeProvider(metadataReader, customAttribute.Value);
+            var signature = ctor.DecodeMethodSignature<string, object>(provider, new GenericContext());
+            return signature.ParameterTypes;
+            //return default;
+        }
+    }
+
+    internal class StringParameterValueTypeProvider : ISignatureTypeProvider<string, object>
+    {
+        public StringParameterValueTypeProvider(MetadataReader reader, BlobHandle handle )
+        {
+
+        }
+
+        public string GetArrayType(string elementType, ArrayShape shape)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetByReferenceType(string elementType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetFunctionPointerType(MethodSignature<string> signature)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetGenericInstantiation(string genericType, ImmutableArray<string> typeArguments)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetGenericMethodParameter(object genericContext, int index)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetGenericTypeParameter(object genericContext, int index)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetModifiedType(string modifier, string unmodifiedType, bool isRequired)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetPinnedType(string elementType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetPointerType(string elementType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetPrimitiveType(PrimitiveTypeCode typeCode)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetSZArrayType(string elementType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetTypeFromDefinition(MetadataReader reader, TypeDefinitionHandle handle, byte rawTypeKind)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetTypeFromReference(MetadataReader reader, TypeReferenceHandle handle, byte rawTypeKind)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string GetTypeFromSpecification(MetadataReader reader, object genericContext, TypeSpecificationHandle handle, byte rawTypeKind)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    internal struct GenericContext
+    {
     }
 
     internal static class StringExtension

@@ -97,12 +97,13 @@ namespace AssemblyCrawler
                     sortedAssemblies_all.Add(a.FName.Value, new Dictionary<string, List<AssemblyInfo>>());
                 }
 
-                if (!sortedAssemblies_all[a.FName.Value].ContainsKey(a.AName.Value))
+                var key2 = a.AName.Value + a.FrameworkVersion.ToString();
+                if (!sortedAssemblies_all[a.FName.Value].ContainsKey(key2))
                 {
-                    sortedAssemblies_all[a.FName.Value].Add(a.AName.Value, new List<AssemblyInfo>());
+                    sortedAssemblies_all[a.FName.Value].Add(key2, new List<AssemblyInfo>());
                 }
 
-                sortedAssemblies_all[a.FName.Value][a.AName.Value].Add(a);
+                sortedAssemblies_all[a.FName.Value][key2].Add(a);
             }
 
             var keyList = sortedAssemblies_all.Keys.ToList();

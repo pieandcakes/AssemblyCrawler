@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
+using System.Security.Cryptography;
 
 
 /* NOTES
@@ -58,7 +59,18 @@ namespace AssemblyCrawler
         public AssemblyInfo(FileInfo file)
         {
             this.file = file;
-            FileVersion = new Lazy<Version>(() => new Version(FileVersionInfo.GetVersionInfo(file.FullName)?.FileVersion?.Split(' ')[0] ?? "0.0.999.9"));
+
+            FileVersion = new Lazy<Version>(() =>
+            {
+                if (Version.TryParse(FileVersionInfo.GetVersionInfo(file.FullName)?.FileVersion, out Version? fileVersion) && fileVersion is not null)
+                {
+                    return fileVersion;
+                }
+
+                // Placeholder
+                return new Version("0.0.999.9");
+            });
+
             FileSize = new Lazy<ulong>(() => (ulong)file.Length);
 
             this.assemblyName = new Lazy<AssemblyName>(GetAssemblyName);
@@ -125,12 +137,47 @@ namespace AssemblyCrawler
                         _ = value.ReadByte();
                         _ = value.ReadByte();
                         var targetFramework = value.ReadSerializedString();
-                        return targetFramework;
+                        try
+                        {
+                            _ = value.ReadByte();
+                            _ = value.ReadByte();
+                            _ = value.ReadByte();
+                            _ = value.ReadByte();
+                            var label = value.ReadSerializedString();
+                            var displayName = value.ReadSerializedString();
+                            if (!string.IsNullOrEmpty(displayName))
+                            {
+                                return displayName;
+                            }
+                        }
+                        catch { }
+
+                        return targetFramework ?? "Unknown";
                     }
                 }
                 catch { }
             }
-            return string.Empty;
+            return "Unknown";
+        }
+
+        public bool IsReadyToRun()
+        {
+            using var stream = File.OpenRead(file.FullName);
+            using var reader = new PEReader(stream);
+            
+            // From Concord: https://devdiv.visualstudio.com/DevDiv/_git/Concord?path=/src/impl/Common/PEFile.cpp&version=GBmain&line=1761&lineEnd=1770&lineStartColumn=1&lineEndColumn=18&lineStyle=plain&_a=contents
+            //DWORD dwSignature = 0;
+            //HRESULT hr = ReadRVA(m_IMAGE_COR20_HEADER.ManagedNativeHeader.VirtualAddress, &dwSignature, sizeof(DWORD));
+            //if (hr != S_OK)
+            //{
+            //    VSFAIL("failed to read ManagedNativeHeader Signature???");
+            //}
+            //else
+            //{
+            //    m_fManagedReadyToRun = dwSignature == 0x00525452; // 'RTR'
+            //}
+
+            return false;
         }
 
         private string GetPublicKey()

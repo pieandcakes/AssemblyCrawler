@@ -183,20 +183,21 @@ namespace AssemblyCrawler
                 }
 
                 // write header
-                sw.WriteLine("FileName,AssemblyName,Count,TotalSizeInMB,IsManaged,FrameWorkVersion,FilePath,Size");
+                sw.WriteLine("FileName,AssemblyName,FileVersion,Count,IsManaged,FrameWorkVersion,FilePath,Size");
                 foreach (var key in sortedList.Keys)
                 {
-                    ulong sumInMB = 0;
+                    //ulong sumInMB = 0;
                     foreach (var key2 in sortedList[key].Keys.ToList())
                     {
-                        foreach (var item in sortedList[key][key2])
-                        {
-                            sumInMB += item.FileSize.Value;
-                        }
-                        var prefix = $"{sortedList[key][key2][0].FName},{key2.Replace(',', ' ')},{sortedList[key][key2].Count()},{sumInMB.ToString()},{sortedList[key][key2][0].IsManaged.Value},{sortedList[key][key2][0].FrameworkVersion.Value.Replace(',',' ')}";
+                        //foreach (var item in sortedList[key][key2])
+                        //{
+                        //    sumInMB += item.FileSize.Value;
+                        //}
                         foreach (var a in sortedList[key][key2])
                         {
-                            sw.WriteLine($"{prefix},{a.Path},{a.FileSize}");
+                            var prefix = $"{a.FName.Value},{a.AName.Value.Replace(',', ' ')},{a.FileVersion.Value.ToString()},{sortedList[key][key2].Count()},{a.IsManaged.Value}";
+
+                            sw.WriteLine($"{prefix},{a.FrameworkVersion.Value.ToString()},{a.Path},{a.FileSize.Value}");
                         }
                     }
                 }

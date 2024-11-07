@@ -86,14 +86,16 @@ namespace AssemblyCrawler
 
         private AssemblyName GetAssemblyName()
         {
-            try
+            if (this.IsManaged.Value)
             {
-                return AssemblyName.GetAssemblyName(file.FullName);
+                try
+                {
+                    return AssemblyName.GetAssemblyName(file.FullName);
+                }
+                catch
+                { }
             }
-            catch
-            {
-                return default;
-            }
+            return default;
         }
 
         private Version GetAssemblyVersion()
@@ -121,6 +123,7 @@ namespace AssemblyCrawler
                     // look for System.Runtime.Versioning.TargetFrameworkAttribute
                     // var attributeHandle = metadataReader.CustomAttributes.Cast<CustomAttributeHandle>().SingleOrDefault(metadataReader.IsTargetFrameworkMonikerAttribute);
                     var attribute = metadataReader.GetCustomAttribute(handle);
+                    var metadataVersion = metadataReader.MetadataVersion;
                     if (attribute.Constructor.Kind != HandleKind.MemberReference)
                     {
                         continue;

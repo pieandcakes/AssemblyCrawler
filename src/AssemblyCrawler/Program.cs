@@ -197,7 +197,7 @@ namespace AssemblyCrawler
                         {
                             var prefix = $"{a.FName.Value},{a.AName.Value.Replace(',', ' ')},{a.FileVersion.Value.ToString()},{sortedList[key][key2].Count()},{a.IsManaged.Value}";
 
-                            sw.WriteLine($"{prefix},{a.FrameworkVersion.Value.ToString()},{a.Path},{a.FileSize.Value}");
+                            sw.WriteLine($"{prefix},{a.FrameworkVersion.Value.ToString().Replace(',', ' ')},{a.Path},{a.FileSize.Value}");
                         }
                     }
                 }

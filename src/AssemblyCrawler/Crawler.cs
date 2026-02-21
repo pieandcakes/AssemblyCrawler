@@ -52,14 +52,14 @@ namespace AssemblyCrawler
             var files = d.EnumerateFiles().ToList();
             var directories = d.EnumerateDirectories().ToList();
 
-            var assemblyFilesList = files.Where(file => string.Equals(file.Extension, ".dll", StringComparison.OrdinalIgnoreCase)
+            var assemblyFiles = files.Where(file => string.Equals(file.Extension, ".dll", StringComparison.OrdinalIgnoreCase)
             && !file.Name.EndsWith(".resources.dll", StringComparison.OrdinalIgnoreCase) // Ignore Resource dlls
             && !file.Attributes.HasFlag(FileAttributes.ReparsePoint)).ToList(); // Ignore symlinks
 
             TotalFileCount += files.Count;
-            TotalAssemblyCount += assemblyFilesList.Count;
+            TotalAssemblyCount += assemblyFiles.Count;
 
-            assemblies.AddRange(assemblyFilesList.Select(a => new AssemblyInfo(a)));
+            assemblies.AddRange(assemblyFiles.Select(a => new AssemblyInfo(a)));
 
             if (directories.Any())
             {

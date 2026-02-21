@@ -15,7 +15,7 @@ namespace AssemblyCrawler
         {
             if (args.Length > 0)
             {
-                Console.Error.WriteLine("Argument count not correct");
+                Console.Error.WriteLine("This program does not accept command-line arguments.");
                 return;
             }
 
@@ -25,6 +25,14 @@ namespace AssemblyCrawler
 
         public static void InnerLoop(string? path = null)
         {
+            if (!string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
+            {
+                Crawler c = new Crawler(path);
+                c.Crawl();
+                crawler = c;
+                c.Sort();
+            }
+
             bool exit = false;
             while (!exit)
             {
@@ -130,9 +138,6 @@ namespace AssemblyCrawler
                     case "r":
                         GenerateRyansList(useManaged);
                         break;
-                    case "s":
-                        CreateSymLinkForAssembly();
-                        break;
                     case "q":
                         exit = true;
                         break;
@@ -143,22 +148,6 @@ namespace AssemblyCrawler
                         break;
                 }
             }
-        }
-
-        private static void CreateSymLinkForAssembly()
-        {
-            //// only symlink managed assemblies
-            //var list = ListToUse(true);
-            //Console.WriteLine("Enter assembly name for SymLinking:");
-            //var assemblyName = Console.ReadLine();
-            //if (string.IsNullOrWhiteSpace(assemblyName) || !list.Keys.Contains(assemblyName, StringComparer.OrdinalIgnoreCase))
-            //{
-            //    Console.WriteLine("Invalid assemblyname or assemblyname not found. Only Managed Assembly names supported.");
-            //    return;
-            //}
-
-            //crawler.CreateSymlinks(assemblyName);
-
         }
 
         private static void GenerateRyansList(bool useManaged)
@@ -178,7 +167,7 @@ namespace AssemblyCrawler
                 }
                 else
                 {
-                    FileStream fs = new FileStream(filename, FileMode.OpenOrCreate, FileAccess.Write);
+                    FileStream fs = new FileStream(filename, FileMode.Create, FileAccess.Write);
                     sw = new StreamWriter(fs);
                 }
 
@@ -250,7 +239,7 @@ namespace AssemblyCrawler
 
             var keyItems = sortedList.Where(item => item.Value.Count() == count).ToList();
             var keyItemCount = keyItems.Count();
-            Console.WriteLine($"{keyItemCount} itemsfound for target count {count}.");
+            Console.WriteLine($"{keyItemCount} items found for target count {count}.");
             for (int i = 0; i < keyItemCount; i++)
             {
                 Console.WriteLine($"  {keyItems[i].Key}");

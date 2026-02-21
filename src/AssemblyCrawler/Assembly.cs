@@ -6,35 +6,6 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
-using System.Security.Cryptography;
-
-
-/* NOTES
-
-// Get 
-
-
-        // Any CPU = x86 + COMIMAGE_FLAGS_ILONLY will give the flag
-
-        (dwManagedImageFlags &COMIMAGE_FLAGS_ILONLY) != 0;
-
-
-        // How you get the core header
-
-        if (image_optional_header.h32.NumberOfRvaAndSizes > IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR)
-        {
-            *ManagedCode = image_optional_header.h32.DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].Size ? TRUE : FALSE;
-            if (*ManagedCode)
-            {
-                fSucc = ReadCORHeader(hImage,
-                                      image_optional_header.h32.DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].VirtualAddress,
-                                      image_optional_header.h32.DataDirectory[IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR].Size,
-                                      image_section_headers,
-                                      section_count,
-                                      &ich);
-            }
-        }
-*/
 
 namespace AssemblyCrawler
 {
@@ -44,11 +15,11 @@ namespace AssemblyCrawler
         public readonly Lazy<string> AName;
         public readonly Lazy<Version> AssemblyVersion;
         public readonly Lazy<Version> FileVersion;
-        public Lazy<ulong> FileSize;
-        public Lazy<string> PublicKeyToken;
-        public Lazy<string> FrameworkVersion;
+        public readonly Lazy<ulong> FileSize;
+        public readonly Lazy<string> PublicKeyToken;
+        public readonly Lazy<string> FrameworkVersion;
 
-        public Lazy<bool> IsManaged;
+        public readonly Lazy<bool> IsManaged;
 
         public string Path => file.DirectoryName;
 
@@ -92,8 +63,10 @@ namespace AssemblyCrawler
                 {
                     return AssemblyName.GetAssemblyName(file.FullName);
                 }
-                catch
-                { }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"GetAssemblyName failed for '{file.FullName}': {ex.Message}");
+                }
             }
             return default;
         }
@@ -161,31 +134,6 @@ namespace AssemblyCrawler
                 catch { }
             }
             return "Unknown";
-        }
-
-        public bool IsReadyToRun()
-        {
-            using var stream = File.OpenRead(file.FullName);
-            using var reader = new PEReader(stream);
-            
-            // From Concord: https://devdiv.visualstudio.com/DevDiv/_git/Concord?path=/src/impl/Common/PEFile.cpp&version=GBmain&line=1761&lineEnd=1770&lineStartColumn=1&lineEndColumn=18&lineStyle=plain&_a=contents
-            //DWORD dwSignature = 0;
-            //HRESULT hr = ReadRVA(m_IMAGE_COR20_HEADER.ManagedNativeHeader.VirtualAddress, &dwSignature, sizeof(DWORD));
-            //if (hr != S_OK)
-            //{
-            //    VSFAIL("failed to read ManagedNativeHeader Signature???");
-            //}
-            //else
-            //{
-            //    m_fManagedReadyToRun = dwSignature == 0x00525452; // 'RTR'
-            //}
-
-            return false;
-        }
-
-        private string GetPublicKey()
-        {
-            return HexByteArrayToString(assemblyName.Value?.GetPublicKey());
         }
 
         private string GetPublicKeyToken()

@@ -4,8 +4,6 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AssemblyCrawler
 {
@@ -56,10 +54,10 @@ namespace AssemblyCrawler
 
             var assemblyFiles = files.Where(file => string.Equals(file.Extension, ".dll", StringComparison.OrdinalIgnoreCase)
             && !file.Name.EndsWith(".resources.dll", StringComparison.OrdinalIgnoreCase) // Ignore Resource dlls
-            && !file.Attributes.HasFlag(FileAttributes.ReparsePoint)); // Ignore symlinks
+            && !file.Attributes.HasFlag(FileAttributes.ReparsePoint)).ToList(); // Ignore symlinks
 
-            TotalFileCount += files.Count();
-            TotalAssemblyCount += assemblyFiles.Count();
+            TotalFileCount += files.Count;
+            TotalAssemblyCount += assemblyFiles.Count;
 
             assemblies.AddRange(assemblyFiles.Select(a => new AssemblyInfo(a)));
 
@@ -122,7 +120,7 @@ namespace AssemblyCrawler
                 }
             }
 
-            sortedAssemblies_managed = new Dictionary<string, Dictionary<string, List<AssemblyInfo>>>(sortedAssemblies_all);
+            sortedAssemblies_managed = new Dictionary<string, Dictionary<string, List<AssemblyInfo>>>(sortedAssemblies_all, StringComparer.OrdinalIgnoreCase);
 
             keyList = sortedAssemblies_managed.Keys.ToList();
             foreach (var key in keyList)
@@ -132,141 +130,12 @@ namespace AssemblyCrawler
                     if (sortedAssemblies_managed[key][key2][0].IsManaged.Value == false)
                     {
                         sortedAssemblies_managed.Remove(key);
+                        break;
                     }
                 }
             }
 
             Console.WriteLine($"Sort complete in {sw.ElapsedMilliseconds}ms");
-        }
-
-        private const string AssemblyCacheFolderName = "AssemblyCache";
-        private const string PreCacheFileName = "files.txt";
-        //public void CreateSymlinks(string assemblyName)
-        //{
-        //    //copy each specific assembly
-        //    if (string.IsNullOrWhiteSpace(assemblyName) || !sortedAssemblies_managed.ContainsKey(assemblyName))
-        //    {
-        //        Console.WriteLine("Empty or invalid assembly name");
-        //    }
-
-        //    var list = sortedAssemblies_managed[assemblyName];
-        //    if (!list.Any())
-        //    {
-        //        Console.WriteLine($"No duplicates found for ${assemblyName}.");
-        //        return;
-        //    }
-
-        //    var assemblyByHashCode = list.SortByHashCode();
-
-        //    // create new folder
-        //    var vsInstallationFolder = System.IO.Path.Combine(ParsePath, "Common7", "IDE");
-        //    while (!Directory.Exists(vsInstallationFolder))
-        //    {
-        //        Console.WriteLine($"Installation not found at '{vsInstallationFolder}'");
-        //        Console.WriteLine("Enter location of Visual Studio Installation:");
-        //        vsInstallationFolder = Console.ReadLine();
-
-        //        if (String.IsNullOrWhiteSpace(vsInstallationFolder))
-        //        {
-        //            return;
-        //        }
-        //    }
-
-        //    var assemblyCacheFolder = Path.Combine(vsInstallationFolder, AssemblyCacheFolderName);
-        //    CreateDirectoryIfNotExists(assemblyCacheFolder);
-
-        //    var assemblyNameFolder = Path.Combine(assemblyCacheFolder, assemblyName);
-        //    CreateDirectoryIfNotExists(assemblyNameFolder);
-
-        //    var keys = assemblyByHashCode.Keys.ToList();
-        //    //create symlinks            
-        //    foreach (var key in keys)
-        //    {
-        //        try
-        //        {
-        //            var hashCodeFolder = Path.Combine(assemblyNameFolder, key.ToString("X8"));
-        //            CreateDirectoryIfNotExists(hashCodeFolder);
-
-        //            var instances = assemblyByHashCode[key].Where(item => !Path.GetFullPath(item.Path).StartsWith(Path.GetFullPath(hashCodeFolder), StringComparison.OrdinalIgnoreCase)).ToList();
-
-        //            if (!instances.Any())
-        //            {
-        //                continue;
-        //            }
-
-        //            var paths = instances.Select(item => item.Path).ToList();
-
-        //            var precacheFileName = Path.Combine(hashCodeFolder, PreCacheFileName);
-
-        //            {
-        //                using FileStream fs = new FileStream(precacheFileName, FileMode.Append);
-        //                using StreamWriter sw = new StreamWriter(fs);
-
-        //                //don't pick up the ones in the cache folder
-        //                paths.ForEach(item => sw.WriteLine(item));
-        //                sw.Flush();
-        //                sw.Close();
-        //            }
-
-        //            var fileName = instances[0].FName.Value;
-        //            var cacheAssemblyFileName = Path.Combine(hashCodeFolder, assemblyName);
-
-        //            // copy one into it if it doesn't exist
-        //            if (!File.Exists(cacheAssemblyFileName))
-        //            {
-        //                //these should all be the same so we don't care which one we're copying
-        //                File.Copy(Path.Combine(paths[0], fileName), cacheAssemblyFileName);
-        //            }
-
-        //            foreach (var path in paths)
-        //            {
-        //                var target = Path.Combine(path, fileName);
-        //                try
-        //                {
-        //                    File.Delete(target);
-        //                    MakeSymLink(target, cacheAssemblyFileName);
-        //                }
-        //                catch
-        //                {
-        //                    //undo the delete if soemthing bad happens
-        //                    if (!File.Exists(target))
-        //                    {
-        //                        File.Copy(cacheAssemblyFileName, target);
-        //                    }
-        //                    throw;
-        //                }
-        //            }
-        //        }
-        //        catch (UnauthorizedAccessException)
-        //        {
-        //            Console.WriteLine("Don't have access");
-        //            throw;
-        //        }
-        //    }
-        //}
-
-        private static void CreateDirectoryIfNotExists(string path)
-        {
-            if (!Directory.Exists(path))
-            {
-                Directory.CreateDirectory(path);
-            }
-        }
-
-        private static void MakeSymLink(string symLinkPath, string destinationFile)
-        {
-            ProcessStartInfo psi = new ProcessStartInfo("cmd.exe", $"/c mklink \"{symLinkPath}\" \"{destinationFile}\"");
-            var process = Process.Start(psi);
-            while (!process.HasExited)
-            {
-                process.WaitForExit();
-            }
-
-            if (process.ExitCode != 0)
-            {
-                Console.WriteLine($"Failed to create symlink {symLinkPath} pointing to {destinationFile}. ExitCode {process.ExitCode}.");
-                throw new InvalidOperationException();
-            }
         }
     }
 }
